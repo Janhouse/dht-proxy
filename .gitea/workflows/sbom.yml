@@ -1,0 +1,115 @@
+name: SBOM Generation
+run-name: ${{ gitea.actor }} is generating SBOM 📋
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Builder"]
+    types:
+      - completed
+
+env:
+  TRIVY_VERSION: v0.69.3
+  CYCLONEDX_CLI_VERSION: v0.27.1
+  CONTAINER_IMAGE: ${{ vars.REPOSITORY_IMAGE }}:latest
+
+jobs:
+  sbom:
+    runs-on: ubuntu-latest
+    # Run on manual trigger OR if the build workflow succeeded
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.REGISTRY_URL }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_ACCESS_TOKEN }}
+
+      - name: Pull container image
+        run: docker pull ${{ env.CONTAINER_IMAGE }}
+
+      - name: Cache tools
+        id: cache-tools
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/bin
+          key: sbom-tools-${{ runner.os }}-trivy-${{ env.TRIVY_VERSION }}-cyclonedx-${{ env.CYCLONEDX_CLI_VERSION }}
+
+      - name: Install Trivy
+        if: steps.cache-tools.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/.local/bin
+          curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ~/.local/bin $TRIVY_VERSION
+
+      - name: Install CycloneDX CLI
+        if: steps.cache-tools.outputs.cache-hit != 'true'
+        run: |
+          curl -sSfL https://github.com/CycloneDX/cyclonedx-cli/releases/download/$CYCLONEDX_CLI_VERSION/cyclonedx-linux-x64 -o ~/.local/bin/cyclonedx-cli
+          chmod +x ~/.local/bin/cyclonedx-cli
+
+      - name: Add tools to PATH
+        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Generate SBOM for container (OS packages only)
+        run: |
+          trivy image ${{ env.CONTAINER_IMAGE }} \
+            --skip-files '/app/**' \
+            --format cyclonedx \
+            --output container-sbom.json
+
+      - name: Generate SBOM for project (npm/bun deps from lockfile)
+        run: |
+          trivy fs . \
+            --format cyclonedx \
+            --output source-sbom.json
+
+      - name: Merge SBOMs
+        run: |
+          cyclonedx-cli merge \
+            --input-files container-sbom.json source-sbom.json \
+            --output-file sbom.json \
+            --output-format json
+
+      - name: Determine version tag
+        id: version
+        run: |
+          VERSION=$(git describe --exact-match --tags 2>/dev/null || git rev-parse --short HEAD)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Version tag: ${VERSION}"
+
+      - name: Upload SBOM to DependencyTrack
+        env:
+          DTRACK_URL: ${{ secrets.DEPENDENCY_TRACK_URL }}
+          DTRACK_API_KEY: ${{ secrets.DEPENDENCY_TRACK_API_KEY }}
+          PROJECT_NAME: ${{ secrets.DEPENDENCY_TRACK_PROJECT_NAME }}
+          PROJECT_VERSION: latest
+          PROJECT_TAG: ${{ steps.version.outputs.version }}
+        run: |
+          echo "Uploading merged SBOM to DependencyTrack..."
+          echo "Project: ${PROJECT_NAME} @ ${PROJECT_VERSION}"
+          echo "Tag: ${PROJECT_TAG}"
+
+          # Base64 encode the BOM and build JSON payload file
+          BOM_BASE64=$(base64 -w 0 sbom.json)
+          cat > payload.json << EOF
+          {
+            "projectName": "${PROJECT_NAME}",
+            "projectVersion": "${PROJECT_VERSION}",
+            "autoCreate": true,
+            "isLatestProjectVersion": true,
+            "projectTags": [{"name": "${PROJECT_TAG}"}],
+            "bom": "${BOM_BASE64}"
+          }
+          EOF
+
+          curl -X PUT "${DTRACK_URL}/api/v1/bom" \
+            -H "X-Api-Key: ${DTRACK_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d @payload.json
+
+          echo ""
+          echo "SBOM upload completed successfully"

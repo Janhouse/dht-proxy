@@ -1,0 +1,20 @@
+{
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.preferences.importModuleSpecifier": "project-relative",
+  "typescript.preferences.preferTypeOnlyAutoImports": true,
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "editor.formatOnSave": true,
+  "editor.formatOnSaveMode": "modificationsIfAvailable",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.biome": "always"
+  },
+  "editor.defaultFormatter": "biomejs.biome",
+  "gitlens.telemetry.enabled": false,
+  "search.exclude": {
+    "**/node_modules/**": true,
+    ".next/**": true
+  },
+  "css.validate": false,
+  "less.validate": false,
+  "scss.validate": false
+}

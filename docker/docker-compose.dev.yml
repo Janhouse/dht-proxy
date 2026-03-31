@@ -1,0 +1,24 @@
+services:
+  # In dev mode, the app runs on the host — stub it out
+  app:
+    image: busybox
+    command: ["true"]
+    restart: "no"
+    healthcheck:
+      disable: true
+    depends_on: {}
+    environment: {}
+    env_file: []
+
+  db:
+    ports:
+      - "${POSTGRES_EXPOSE:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  geoipupdate:
+    volumes:
+      - ../geoip:/usr/share/GeoIP
+
+volumes:
+  pgdata:

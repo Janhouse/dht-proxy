@@ -1,0 +1,10 @@
+services:
+  qbt-dht-proxy:
+    image: ${DOCKER_IMAGE:-qbittorrent-dht-proxy}
+    build: .
+    ports:
+      - "${PROXY_PORT:-9080}:9080"
+    env_file:
+      - path: .env
+        required: false
+    restart: unless-stopped

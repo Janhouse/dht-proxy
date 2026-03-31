@@ -1,0 +1,9 @@
+{
+  "recommendations": [
+    "mhutchie.git-graph",
+    "emmanuelbeziat.vscode-great-icons",
+    "christian-kohler.npm-intellisense",
+    "eamodio.gitlens",
+    "biomejs.biome"
+  ]
+}

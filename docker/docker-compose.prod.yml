@@ -1,0 +1,44 @@
+networks:
+  dht-proxy:
+    driver: bridge
+  traefik:
+    external: true
+
+services:
+  app:
+    volumes:
+      - ${DOCKER_DATA:-/data}/dht-proxy/data:/app/data
+      - ${DOCKER_DATA:-/data}/dht-proxy/geoip-data:/geoip
+    networks:
+      - dht-proxy
+      - traefik
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 1G
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      com.centurylinklabs.watchtower.enable: true
+      logging: promtail
+
+      traefik.docker.network: traefik
+      traefik.enable: true
+      traefik: intranet
+      traefik.http.routers.dht-proxy.rule: Host(`${BASE_DOMAIN}`)
+      traefik.http.routers.dht-proxy.entrypoints: extranet
+      traefik.http.routers.dht-proxy.middlewares: base@file, crowdsec@file
+      traefik.http.routers.dht-proxy.service: dht-proxy
+      traefik.http.services.dht-proxy.loadbalancer.server.port: 3000
+  db:
+    volumes:
+      - ${DOCKER_DATA:-/data}/dht-proxy/postgres:/var/lib/postgresql/data
+    networks:
+      - dht-proxy
+
+  geoipupdate:
+    volumes:
+      - ${DOCKER_DATA:-/data}/dht-proxy/geoip-data:/usr/share/GeoIP
+    labels:
+      com.centurylinklabs.watchtower.enable: true

@@ -1,0 +1,54 @@
+services:
+  app:
+    image: ${DOCKER_IMAGE:-dht-proxy}
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-dhtproxy}:${POSTGRES_PASSWORD:-dhtproxy}@db:5432/${POSTGRES_DB:-dhtproxy}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-http://localhost:3000}
+      - OIDC_ISSUER_URL=${OIDC_ISSUER_URL}
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID}
+      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET}
+      - ANNOUNCE_URL=${ANNOUNCE_URL}
+      - DHT_PROXY_PUBLIC=${DHT_PROXY_PUBLIC:-true}
+      - DHT_PROXY_API_TOKEN=${DHT_PROXY_API_TOKEN}
+      - GEOIP_DB_PATH=/geoip/GeoLite2-City.mmdb
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: "50m"
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-dhtproxy}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-dhtproxy}
+      - POSTGRES_DB=${POSTGRES_DB:-dhtproxy}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dhtproxy}"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 2s
+    logging:
+      options:
+        max-size: "50m"
+
+  geoipupdate:
+    image: maxmindinc/geoipupdate:latest
+    restart: unless-stopped
+    environment:
+      - GEOIPUPDATE_ACCOUNT_ID=${GEOIPUPDATE_ACCOUNT_ID}
+      - GEOIPUPDATE_LICENSE_KEY=${GEOIPUPDATE_LICENSE_KEY}
+      - GEOIPUPDATE_EDITION_IDS=GeoLite2-City
+      - GEOIPUPDATE_FREQUENCY=120
+      - GEOIPUPDATE_PRESERVE_FILE_TIMES=1
+    logging:
+      options:
+        max-size: "50m"

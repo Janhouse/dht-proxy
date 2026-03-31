@@ -1,0 +1,99 @@
+name: Builder
+run-name: ${{ gitea.actor }} is building project 🚀
+on:
+  workflow_dispatch:
+    inputs:
+      push_to_github:
+        description: 'Also push to GitHub Container Registry'
+        required: false
+        default: false
+        type: boolean
+      custom_tags:
+        description: 'Custom tags for the image (comma-separated, e.g., v1.0,v1.0.1)'
+        required: false
+        type: string
+
+env:
+  COMPOSE_FILE: docker/docker-compose.base.yml
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Build DHT Proxy image
+        env:
+          DOCKER_IMAGE: ${{ vars.REPOSITORY_IMAGE }}
+        run: docker compose build app
+
+      - name: Build qBittorrent DHT Proxy image
+        working-directory: qbittorrent-dht-proxy
+        env:
+          DOCKER_IMAGE: ${{ vars.REPOSITORY_IMAGE_QBT }}
+          COMPOSE_FILE: docker-compose.yml
+        run: docker compose build qbt-dht-proxy
+
+      - name: Login to Gitea Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.REGISTRY_URL }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_ACCESS_TOKEN }}
+
+      - name: Push DHT Proxy to Gitea
+        env:
+          DOCKER_IMAGE: ${{ vars.REPOSITORY_IMAGE }}
+        run: docker compose push app
+
+      - name: Push qBittorrent DHT Proxy to Gitea
+        working-directory: qbittorrent-dht-proxy
+        env:
+          DOCKER_IMAGE: ${{ vars.REPOSITORY_IMAGE_QBT }}
+          COMPOSE_FILE: docker-compose.yml
+        run: docker compose push qbt-dht-proxy
+
+      - name: Login to GitHub Container Registry
+        if: ${{ github.event.inputs.push_to_github == 'true' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_ACCESS_TOKEN }}
+
+      - name: Tag and push DHT Proxy to GitHub
+        if: ${{ github.event.inputs.push_to_github == 'true' }}
+        env:
+          SOURCE: ${{ vars.REPOSITORY_IMAGE }}
+          TARGET: ${{ vars.REPOSITORY_IMAGE_PUBLIC }}
+        run: |
+          docker tag "${SOURCE}" "${TARGET}"
+          docker push "${TARGET}"
+
+      - name: Tag and push qBittorrent DHT Proxy to GitHub
+        if: ${{ github.event.inputs.push_to_github == 'true' }}
+        env:
+          SOURCE: ${{ vars.REPOSITORY_IMAGE_QBT }}
+          TARGET: ${{ vars.REPOSITORY_IMAGE_QBT_PUBLIC }}
+        run: |
+          docker tag "${SOURCE}" "${TARGET}"
+          docker push "${TARGET}"
+
+      - name: Push custom tags to GitHub
+        if: ${{ github.event.inputs.push_to_github == 'true' && github.event.inputs.custom_tags != '' }}
+        env:
+          REPOSITORY_IMAGE: ${{ vars.REPOSITORY_IMAGE }}
+          REPOSITORY_IMAGE_PUBLIC: ${{ vars.REPOSITORY_IMAGE_PUBLIC }}
+          CUSTOM_TAGS: ${{ github.event.inputs.custom_tags }}
+        run: |
+          BASE_IMAGE=$(echo "${REPOSITORY_IMAGE_PUBLIC}" | cut -d':' -f1)
+          IFS=',' read -ra TAGS <<< "${CUSTOM_TAGS}"
+          for TAG in "${TAGS[@]}"; do
+            TAG=$(echo "$TAG" | xargs)
+            if [ -n "$TAG" ]; then
+              echo "Tagging and pushing: ${BASE_IMAGE}:${TAG}"
+              docker tag "${REPOSITORY_IMAGE}" "${BASE_IMAGE}:${TAG}"
+              docker push "${BASE_IMAGE}:${TAG}"
+            fi
+          done
