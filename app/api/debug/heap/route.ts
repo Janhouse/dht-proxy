@@ -1,12 +1,16 @@
 import { unlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { writeHeapSnapshot } from "node:v8";
 import { requireAuth } from "@/lib/auth-guard";
 
 export async function GET() {
 	await requireAuth();
 
-	// writeHeapSnapshot generates a .heapsnapshot file loadable in Chrome DevTools
-	const filePath = writeHeapSnapshot();
+	// Write to temp directory to avoid permission issues in containers
+	const filePath = writeHeapSnapshot(
+		join(tmpdir(), `heap-${Date.now()}.heapsnapshot`),
+	);
 
 	const file = Bun.file(filePath);
 	const blob = await file.arrayBuffer();
