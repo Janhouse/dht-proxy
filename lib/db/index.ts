@@ -8,7 +8,12 @@ declare global {
 	var __dbClient: ReturnType<typeof postgres> | undefined;
 }
 
-const client = globalThis.__dbClient ?? postgres(connectionString);
+const client =
+	globalThis.__dbClient ??
+	postgres(connectionString, {
+		max: 10,
+		idle_timeout: 30,
+	});
 
 if (process.env.NODE_ENV !== "production") {
 	globalThis.__dbClient = client;

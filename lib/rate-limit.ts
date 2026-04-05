@@ -8,6 +8,7 @@ interface WindowEntry {
 	resetAt: number;
 }
 
+const MAX_RATE_LIMIT_ENTRIES = 10_000;
 const windows = new Map<string, WindowEntry>();
 
 // Periodically clean up expired entries to prevent memory leaks
@@ -17,6 +18,10 @@ setInterval(() => {
 		if (now >= entry.resetAt) {
 			windows.delete(key);
 		}
+	}
+	// Hard cap: if still too large after cleanup, clear everything
+	if (windows.size > MAX_RATE_LIMIT_ENTRIES) {
+		windows.clear();
 	}
 }, 60_000);
 

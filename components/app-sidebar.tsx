@@ -1,6 +1,7 @@
 "use client";
 
 import {
+	BugIcon,
 	GaugeIcon,
 	HardDriveIcon,
 	LogOutIcon,
@@ -33,6 +34,7 @@ const navItems = [
 	{ title: "Dashboard", href: "/admin", icon: GaugeIcon },
 	{ title: "Torrents", href: "/admin/torrents", icon: HardDriveIcon },
 	{ title: "Settings", href: "/admin/settings", icon: SettingsIcon },
+	{ title: "Debug", href: "/admin/debug", icon: BugIcon },
 ];
 
 const MENU_BTN =

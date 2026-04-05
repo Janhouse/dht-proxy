@@ -14,10 +14,13 @@ const PEER_STALE_MS = 60 * 60 * 1000; // 1 hour — remove peers not seen in thi
 const PAUSE_AFTER_MS = 15 * 60 * 1000; // 15 minutes without announce → pause crawling
 const LOOKUP_TIMEOUT_MS = 30_000; // 30 seconds per lookup
 
+const DHT_TEARDOWN_DELAY_MS = 5 * 60 * 1000; // 5 minutes grace before destroying idle DHT
+
 declare global {
 	var __dhtNode: DHT | undefined;
 	var __dhtCrawlInterval: ReturnType<typeof setInterval> | undefined;
 	var __dhtCleanupInterval: ReturnType<typeof setInterval> | undefined;
+	var __dhtTeardownTimer: ReturnType<typeof setTimeout> | undefined;
 }
 
 /**
@@ -56,6 +59,55 @@ export function getDhtNode(): DHT {
 }
 
 /**
+ * Destroy the DHT node, persisting routing table first.
+ */
+export function destroyDhtNode(): void {
+	cancelDhtTeardown();
+	const dht = globalThis.__dhtNode;
+	if (!dht) return;
+
+	persistDhtNodes();
+	dht.destroy();
+	globalThis.__dhtNode = undefined;
+	console.log("[DHT] Node destroyed (no active torrents)");
+}
+
+/**
+ * Ensure the DHT node is running. Creates it if needed.
+ * Call this before any operation that requires the DHT network.
+ */
+export function ensureDhtNode(): DHT {
+	cancelDhtTeardown();
+	return getDhtNode();
+}
+
+/**
+ * Schedule DHT node teardown after the grace period.
+ */
+function scheduleDhtTeardown(): void {
+	if (globalThis.__dhtTeardownTimer) return; // already scheduled
+	if (!globalThis.__dhtNode) return; // nothing to tear down
+
+	console.log(
+		`[DHT] No active torrents — scheduling teardown in ${DHT_TEARDOWN_DELAY_MS / 1000}s`,
+	);
+	globalThis.__dhtTeardownTimer = setTimeout(() => {
+		globalThis.__dhtTeardownTimer = undefined;
+		destroyDhtNode();
+	}, DHT_TEARDOWN_DELAY_MS);
+}
+
+/**
+ * Cancel a pending DHT teardown (e.g., when a torrent is added).
+ */
+function cancelDhtTeardown(): void {
+	if (globalThis.__dhtTeardownTimer) {
+		clearTimeout(globalThis.__dhtTeardownTimer);
+		globalThis.__dhtTeardownTimer = undefined;
+	}
+}
+
+/**
  * Look up peers for a given infohash via DHT.
  * Returns discovered peers as an array of {ip, port}.
  */
@@ -63,7 +115,7 @@ export function lookupPeers(
 	infoHash: string,
 ): Promise<Array<{ ip: string; port: number }>> {
 	return new Promise((resolve) => {
-		const dht = getDhtNode();
+		const dht = ensureDhtNode();
 		const discovered: Array<{ ip: string; port: number }> = [];
 		const seen = new Set<string>();
 
@@ -177,12 +229,20 @@ export async function cleanupStalePeers(torrentId?: string): Promise<number> {
  * Crawl all active torrents: DHT lookup for each.
  */
 export async function crawlAllTorrents(): Promise<void> {
-	console.log("[DHT] Starting periodic crawl...");
-
 	const activeTorrents = await db
 		.select()
 		.from(torrents)
 		.where(eq(torrents.isActive, true));
+
+	// Nothing to crawl — schedule DHT teardown after grace period
+	if (activeTorrents.length === 0) {
+		scheduleDhtTeardown();
+		return;
+	}
+
+	// We have work to do — ensure DHT is running and cancel any pending teardown
+	ensureDhtNode();
+	console.log("[DHT] Starting periodic crawl...");
 
 	for (const torrent of activeTorrents) {
 		// Skip paused torrents

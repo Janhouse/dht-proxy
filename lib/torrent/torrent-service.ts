@@ -2,7 +2,7 @@ import { count, desc, eq } from "drizzle-orm";
 import { db } from "../db";
 import { settings, torrents } from "../db/schema";
 import { startCrawlLock } from "./crawl-lock";
-import { lookupPeers, storePeers } from "./dht-crawler";
+import { ensureDhtNode, lookupPeers, storePeers } from "./dht-crawler";
 import {
 	buildMagnetUri,
 	createPrivateTorrent,
@@ -74,6 +74,7 @@ export async function updateLastAnnounce(torrentId: string): Promise<void> {
 }
 
 export async function resumeTorrentCrawl(torrentId: string): Promise<void> {
+	ensureDhtNode();
 	await db
 		.update(torrents)
 		.set({ crawlStatus: "active" })
@@ -160,6 +161,9 @@ export async function addTorrent(input: string | Uint8Array): Promise<{
 	const magnetUri = hasTorrentData
 		? null
 		: buildMagnetUri(parsed.infoHash, parsed.name, fullAnnounceUrl);
+
+	// Ensure DHT node is running before starting discovery
+	ensureDhtNode();
 
 	// Start background peer discovery with a crawl lock.
 	// The announce endpoint will wait on this lock before returning empty peers.
