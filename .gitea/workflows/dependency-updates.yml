@@ -7,7 +7,7 @@ on:
 
 jobs:
   update:
-    uses: ${{ vars.REPO_URL }}/janhouse/gitea-bun-deps-update/.gitea/workflows/run.yml@main
+    uses: https://git.janhouse.lv/janhouse/gitea-bun-deps-update/.gitea/workflows/run.yml@main
     with:
       base-branch: main
     secrets:
