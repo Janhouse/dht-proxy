@@ -2,6 +2,7 @@ name: Checks
 run-name: ${{ gitea.actor }} is running checks 🚀
 on:
   push:
+    branches: [main]
   pull_request:
 
 jobs:
