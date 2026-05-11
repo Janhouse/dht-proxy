@@ -9,8 +9,6 @@ on:
       - completed
 
 env:
-  TRIVY_VERSION: v0.69.3
-  CYCLONEDX_CLI_VERSION: v0.27.1
   CONTAINER_IMAGE: ${{ vars.REPOSITORY_IMAGE }}:latest
 
 jobs:
@@ -32,27 +30,11 @@ jobs:
       - name: Pull container image
         run: docker pull ${{ env.CONTAINER_IMAGE }}
 
-      - name: Cache tools
-        id: cache-tools
-        uses: actions/cache@v4
+      - name: Install SBOM tools
+        uses: https://git.janhouse.lv/janhouse/sbom-tools-action@v1
         with:
-          path: ~/.local/bin
-          key: sbom-tools-${{ runner.os }}-trivy-${{ env.TRIVY_VERSION }}-cyclonedx-${{ env.CYCLONEDX_CLI_VERSION }}
-
-      - name: Install Trivy
-        if: steps.cache-tools.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p ~/.local/bin
-          curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ~/.local/bin $TRIVY_VERSION
-
-      - name: Install CycloneDX CLI
-        if: steps.cache-tools.outputs.cache-hit != 'true'
-        run: |
-          curl -sSfL https://github.com/CycloneDX/cyclonedx-cli/releases/download/$CYCLONEDX_CLI_VERSION/cyclonedx-linux-x64 -o ~/.local/bin/cyclonedx-cli
-          chmod +x ~/.local/bin/cyclonedx-cli
-
-      - name: Add tools to PATH
-        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+          trivy-version: ${{ vars.TRIVY_VERSION }}
+          cyclonedx-version: ${{ vars.CYCLONEDX_CLI_VERSION }}
 
       - name: Generate SBOM for container (OS packages only)
         run: |
