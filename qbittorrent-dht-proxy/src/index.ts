@@ -23,28 +23,21 @@ async function loginToQBittorrent(): Promise<void> {
 		redirect: "manual",
 	});
 
+	if (!res.ok) {
+		throw new Error(`[QB] Login failed: HTTP ${res.status}`);
+	}
+
+	const body = (await res.text()).trim();
+	if (body === "Fails.") {
+		throw new Error("[QB] Login failed: bad credentials");
+	}
+
 	const setCookie = res.headers.get("set-cookie");
-	if (setCookie) {
-		const sidMatch = setCookie.match(/SID=([^;]+)/);
-		if (sidMatch) {
-			qbtSidCookie = `SID=${sidMatch[1]}`;
-			console.log("[QB] Login successful");
-			return;
-		}
+	const sidMatch = setCookie?.match(/(QBT_SID_\d+|SID)=([^;]+)/);
+	if (sidMatch) {
+		qbtSidCookie = `${sidMatch[1]}=${sidMatch[2]}`;
 	}
-
-	const body = await res.text();
-	if (body === "Ok.") {
-		// Some versions don't set cookie on first login
-		const cookieHeader = res.headers.get("set-cookie");
-		if (cookieHeader) {
-			qbtSidCookie = cookieHeader.split(";")[0];
-		}
-		console.log("[QB] Login successful (no cookie in response)");
-		return;
-	}
-
-	throw new Error(`[QB] Login failed: ${body}`);
+	console.log("[QB] Login successful");
 }
 
 interface ProxiedResult {
