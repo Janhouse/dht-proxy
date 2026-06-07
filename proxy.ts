@@ -13,7 +13,7 @@ export const config = {
 	],
 };
 
-export const skipMiddleware = [
+const skipMiddleware = [
 	/^\/_next\//,
 	/^\/static\//,
 	/^\/auth\//,
