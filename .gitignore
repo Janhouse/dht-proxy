@@ -47,3 +47,6 @@ next-env.d.ts
 # GeoIP databases
 geoip/*.mmdb
 geoip/*.lock
+
+# fallow codebase intelligence
+.fallow/

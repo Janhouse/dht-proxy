@@ -1,0 +1,19 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  // Entry points and workspaces are auto-detected (Next.js plugin +
+  // package.json), so no manual "entry"/"workspaces" list is needed.
+  // components/ui/** is vendored shadcn/ui: keep its full API. Treat it as
+  // an entry surface so its exports are not flagged unused while its
+  // imports still count toward dependency usage.
+  "entry": ["components/ui/**"],
+  // babel-plugin-react-compiler is loaded implicitly via reactCompiler in
+  // next.config, so it has no direct import.
+  "ignoreDependencies": ["babel-plugin-react-compiler"],
+  "duplicates": {
+    // Hide pair-only clones; focus on widespread copy-paste.
+    "minOccurrences": 3
+  },
+  "rules": {
+    "unused-dependencies": "warn"
+  }
+}
