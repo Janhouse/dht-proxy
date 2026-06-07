@@ -43,14 +43,6 @@ function useStatusPoll() {
 	return statuses;
 }
 
-export function TorrentStatusProvider({
-	children,
-}: {
-	children: React.ReactNode;
-}) {
-	return <>{children}</>;
-}
-
 export function useTorrentStatuses() {
 	return useStatusPoll();
 }
