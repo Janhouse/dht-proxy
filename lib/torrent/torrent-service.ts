@@ -12,7 +12,7 @@ import { queryAllTrackers } from "./tracker-client";
 
 const DEFAULT_TTL_DAYS = 7;
 
-export async function getTtlDays(): Promise<number> {
+async function getTtlDays(): Promise<number> {
 	const row = await db
 		.select()
 		.from(settings)

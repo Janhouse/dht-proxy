@@ -260,7 +260,7 @@ async function udpTrackerQuery(
  * Query an HTTP tracker and return discovered peers + stats.
  * Sends event=started, then event=stopped to deregister.
  */
-export async function queryHttpTracker(
+async function queryHttpTracker(
 	announceUrl: string,
 	infoHash: string,
 ): Promise<TrackerResult> {

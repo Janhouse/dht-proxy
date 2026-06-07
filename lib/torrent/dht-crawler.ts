@@ -27,7 +27,7 @@ declare global {
  * Get or create the singleton DHT node.
  * Stored in globalThis to survive Next.js HMR in dev mode.
  */
-export function getDhtNode(): DHT {
+function getDhtNode(): DHT {
 	if (globalThis.__dhtNode) {
 		return globalThis.__dhtNode;
 	}
@@ -61,7 +61,7 @@ export function getDhtNode(): DHT {
 /**
  * Destroy the DHT node, persisting routing table first.
  */
-export function destroyDhtNode(): void {
+function destroyDhtNode(): void {
 	cancelDhtTeardown();
 	const dht = globalThis.__dhtNode;
 	if (!dht) return;
@@ -210,7 +210,7 @@ export async function storePeers(
 /**
  * Remove peers not seen in the last hour for a specific torrent.
  */
-export async function cleanupStalePeers(torrentId?: string): Promise<number> {
+async function cleanupStalePeers(torrentId?: string): Promise<number> {
 	const cutoff = new Date(Date.now() - PEER_STALE_MS);
 
 	const condition = torrentId
@@ -324,7 +324,7 @@ export async function crawlAllTorrents(): Promise<void> {
 /**
  * Remove expired torrents and their peers (cascade delete via FK).
  */
-export async function cleanupExpiredTorrents(): Promise<void> {
+async function cleanupExpiredTorrents(): Promise<void> {
 	const now = new Date();
 	const expired = await db
 		.delete(torrents)
