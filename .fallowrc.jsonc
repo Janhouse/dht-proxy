@@ -5,10 +5,7 @@
   // components/ui/** is vendored shadcn/ui: keep its full API. Treat it as
   // an entry surface so its exports are not flagged unused while its
   // imports still count toward dependency usage.
-  // lib/auth-client.ts re-exports the better-auth client hook set
-  // (signIn/signOut/useSession) as the app's public auth API surface, per
-  // better-auth docs. Keep the full set even though only some are used today.
-  "entry": ["components/ui/**", "lib/auth-client.ts"],
+  "entry": ["components/ui/**"],
   // babel-plugin-react-compiler is loaded implicitly via reactCompiler in
   // next.config, so it has no direct import.
   "ignoreDependencies": ["babel-plugin-react-compiler"],
