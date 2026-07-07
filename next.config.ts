@@ -33,6 +33,12 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
 	output: "standalone",
+	// sharp >=0.35 hides libvips-cpp.so behind a stub.node that output tracing
+	// can't follow (lovell/sharp#4543); force-include the musl variant the
+	// alpine runner uses, or /_next/image 500s once sharp gets bumped to 0.35.
+	outputFileTracingIncludes: {
+		"/*": ["./node_modules/@img/sharp-libvips-linuxmusl-x64/**/*"],
+	},
 	serverExternalPackages: [
 		"bittorrent-dht",
 		"parse-torrent",
