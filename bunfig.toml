@@ -7,4 +7,4 @@
 minimumReleaseAge = 604800
 
 # Add internal/trusted scopes here if any need to bypass the gate.
-# minimumReleaseAgeExcludes = ["@yourorg/internal"]
+minimumReleaseAgeExcludes = ["next", "@next/env", "eslint-config-next", "@next/eslint-plugin-next"]
