@@ -12,6 +12,7 @@ jobs:
       base-branch: main
       monitor-ci: true
     secrets:
+      GHCR_ACCESS_TOKEN: ${{ secrets.GHCR_ACCESS_TOKEN }}
       BOT_TOKEN: ${{ secrets.DEPS_BOT_TOKEN }}
       DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
       DISCORD_USER_ID: ${{ secrets.DISCORD_USER_ID }}

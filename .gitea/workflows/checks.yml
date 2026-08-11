@@ -19,6 +19,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
+          token: ${{ secrets.GHCR_ACCESS_TOKEN }}
           bun-version: latest
 
       - name: Cache Bun dependencies
