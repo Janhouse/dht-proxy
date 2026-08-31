@@ -5,8 +5,8 @@ import { signIn } from "@/lib/auth-client";
 
 export default function LoginPage() {
 	useEffect(() => {
-		signIn.oauth2({
-			providerId: "authentik",
+		signIn.social({
+			provider: "authentik",
 			callbackURL: "/admin",
 		});
 	}, []);
