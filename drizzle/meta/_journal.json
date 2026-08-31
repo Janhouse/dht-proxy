@@ -36,6 +36,13 @@
       "when": 1774953115992,
       "tag": "0004_neat_magus",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788212853098,
+      "tag": "0005_acoustic_mad_thinker",
+      "breakpoints": true
     }
   ]
 }
