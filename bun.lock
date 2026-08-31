@@ -6,6 +6,7 @@
       "name": "dht-proxy-init",
       "dependencies": {
         "@base-ui/react": "^1.7.0",
+        "@better-auth/core": "^1.7.1",
         "@maxmind/geoip2-node": "^7.1.0",
         "bencode": "^4.0.1",
         "better-auth": "^1.7.1",
