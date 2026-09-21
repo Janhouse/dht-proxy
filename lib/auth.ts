@@ -1,9 +1,14 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { genericOAuth } from "better-auth/plugins";
-import { accountIssuerFor } from "./auth-issuer";
 
-/** Provider id registered below; also the issuer namespace suffix. */
+/**
+ * Provider id registered below.
+ *
+ * Better Auth recognises a linked account by (providerId, accountId), so this
+ * value is load-bearing: change it and the existing linked SSO account stops
+ * resolving and the user lands in a new, empty one.
+ */
 const OIDC_PROVIDER_ID = "authentik";
 
 import { db } from "./db";
@@ -31,8 +36,6 @@ export const auth = betterAuth({
 					clientId: process.env.OIDC_CLIENT_ID || "dht-proxy",
 					clientSecret: process.env.OIDC_CLIENT_SECRET || "",
 					scopes: ["openid", "profile", "email"],
-					// Pinned to match the migration backfill; see lib/auth-issuer.ts.
-					accountIssuer: accountIssuerFor(OIDC_PROVIDER_ID),
 				},
 			],
 		}),
