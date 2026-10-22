@@ -26,14 +26,14 @@ jobs:
       - name: Build DHT Proxy image
         env:
           DOCKER_IMAGE: ${{ vars.REPOSITORY_IMAGE }}
-        run: docker compose build app
+        run: docker compose build --pull app
 
       - name: Build qBittorrent DHT Proxy image
         working-directory: qbittorrent-dht-proxy
         env:
           DOCKER_IMAGE: ${{ vars.REPOSITORY_IMAGE_QBT }}
           COMPOSE_FILE: docker-compose.yml
-        run: docker compose build qbt-dht-proxy
+        run: docker compose build --pull qbt-dht-proxy
 
       - name: Login to Gitea Container Registry
         uses: docker/login-action@v3
