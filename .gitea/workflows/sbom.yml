@@ -30,68 +30,15 @@ jobs:
       - name: Pull container image
         run: docker pull ${{ env.CONTAINER_IMAGE }}
 
-      - name: Install SBOM tools
-        uses: https://git.janhouse.lv/janhouse/sbom-tools-action@v1
+      # Source SBOM (lockfiles) + the image's OS packages -> Dependency-Track,
+      # then the images and osv-scanner.toml decisions -> dtrack-panel.
+      - name: SBOM + triage report
+        uses: https://git.janhouse.lv/janhouse/sbom-tools-action/scan@v2
         with:
-          trivy-version: ${{ vars.TRIVY_VERSION }}
-          cyclonedx-version: ${{ vars.CYCLONEDX_CLI_VERSION }}
-
-      - name: Generate SBOM for container (OS packages only)
-        run: |
-          trivy image ${{ env.CONTAINER_IMAGE }} \
-            --skip-files '/app/**' \
-            --format cyclonedx \
-            --output container-sbom.json
-
-      - name: Generate SBOM for project (npm/bun deps from lockfile)
-        run: |
-          trivy fs . \
-            --format cyclonedx \
-            --output source-sbom.json
-
-      - name: Merge SBOMs
-        run: |
-          cyclonedx-cli merge \
-            --input-files container-sbom.json source-sbom.json \
-            --output-file sbom.json \
-            --output-format json
-
-      - name: Determine version tag
-        id: version
-        run: |
-          VERSION=$(git describe --exact-match --tags 2>/dev/null || git rev-parse --short HEAD)
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "Version tag: ${VERSION}"
-
-      - name: Upload SBOM to DependencyTrack
-        env:
-          DTRACK_URL: ${{ secrets.DEPENDENCY_TRACK_URL }}
-          DTRACK_API_KEY: ${{ secrets.DEPENDENCY_TRACK_API_KEY }}
-          PROJECT_NAME: ${{ secrets.DEPENDENCY_TRACK_PROJECT_NAME }}
-          PROJECT_VERSION: latest
-          PROJECT_TAG: ${{ steps.version.outputs.version }}
-        run: |
-          echo "Uploading merged SBOM to DependencyTrack..."
-          echo "Project: ${PROJECT_NAME} @ ${PROJECT_VERSION}"
-          echo "Tag: ${PROJECT_TAG}"
-
-          # Base64 encode the BOM and build JSON payload file
-          BOM_BASE64=$(base64 -w 0 sbom.json)
-          cat > payload.json << EOF
-          {
-            "projectName": "${PROJECT_NAME}",
-            "projectVersion": "${PROJECT_VERSION}",
-            "autoCreate": true,
-            "isLatestProjectVersion": true,
-            "projectTags": [{"name": "${PROJECT_TAG}"}],
-            "bom": "${BOM_BASE64}"
-          }
-          EOF
-
-          curl -X PUT "${DTRACK_URL}/api/v1/bom" \
-            -H "X-Api-Key: ${DTRACK_API_KEY}" \
-            -H "Content-Type: application/json" \
-            -d @payload.json
-
-          echo ""
-          echo "SBOM upload completed successfully"
+          project: ${{ secrets.DEPENDENCY_TRACK_PROJECT_NAME || 'dht-proxy' }}
+          project-version: latest
+          images: git.janhouse.lv/janhouse/dht-proxy, git.janhouse.lv/janhouse/qbittorrent-dht-proxy
+          container-image: ${{ env.CONTAINER_IMAGE }}
+          container-skip-files: '/app/**'
+          dtrack-url: ${{ secrets.DEPENDENCY_TRACK_URL }}
+          dtrack-api-key: ${{ secrets.DEPENDENCY_TRACK_API_KEY }}
