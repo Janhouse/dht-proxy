@@ -1,4 +1,6 @@
 FROM oven/bun:1.4-alpine
+# Base images lag Alpine's security fixes, so upgrade installed packages.
+RUN apk upgrade --no-cache
 WORKDIR /app
 
 COPY package.json ./

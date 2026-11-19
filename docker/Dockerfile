@@ -1,4 +1,6 @@
 FROM oven/bun:1.4-alpine AS base
+# Base images lag Alpine's security fixes, so upgrade installed packages.
+RUN apk upgrade --no-cache
 
 # Install dependencies
 FROM base AS deps
